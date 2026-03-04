@@ -1,1 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmotiSense — NLP Emotion Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0C10;
+      --bg2: #111318;
+      --surface: #1A1C24;
+      --surface2: #22252F;
+      --border: #2D3142;
+      --text: #E8E9F0;
+      --muted: #6B7080;
+      --accent: #C084FC;
+      --accent2: #F59E0B;
+      --glow: rgba(192, 132, 252, 0.15);
+      --radius: 16px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Instrument Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background ── */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(192, 132, 252, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 60%);
+    }
+
+    /* ── Layout ── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 52px;
+      animation: fadeDown 0.8s ease both;
+    }
+
+    .logo-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(192, 132, 252, 0.08);
+      border: 1px solid rgba(192, 132, 252, 0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+    }
+
+    .logo-tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    /* ── Input Section ── */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.8s 0.2s ease both;
+      transition: border-color 0.3s;
+    }
+
+    .input-card:focus-within {
+      border-color: rgba(192, 132, 252, 0.4);
+      box-shadow: 0 0 0 4px var(--glow);
+    }
+
+    .input-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    #char-count {
+      color: var(--accent);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.65;
+      padding: 16px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    textarea:focus {
+      border-color: rgba(192, 132, 252, 0.4);
+    }
+
+    .input-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .example-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .chip:hover {
+      background: var(--border);
+      color: var(--text);
+      border-color: rgba(192, 132, 252, 0.3);
+    }
+
+    .analyze-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #C084FC, #A855F7);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .analyze-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(168, 85, 247, 0.45);
+    }
+
+    .analyze-btn:active {
+      transform: translateY(0);
+    }
+
+    .analyze-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .loader {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── Results ── */
+    #results {
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .results-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .stat-val {
+      color: var(--text);
+    }
+
+    /* ── Summary Card ── */
+    .summary-card {
+      background: linear-gradient(135deg, rgba(192, 132, 252, 0.06), rgba(245, 158, 11, 0.04));
+      border: 1px solid rgba(192, 132, 252, 0.2);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .dominant-emoji {
+      font-size: 2.5rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .summary-text {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .dominant-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    /* ── Emotion Grid ── */
+    .emotion-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .emotion-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .emotion-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--e-color, var(--accent));
+    }
+
+    .emotion-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .emotion-card.dominant {
+      border-color: rgba(192, 132, 252, 0.3);
+      box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.1), 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .emotion-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .emotion-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .e-emoji {
+      font-size: 1.3rem;
+    }
+
+    .e-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: var(--e-color, var(--text));
+      letter-spacing: -0.04em;
+    }
+
+    .progress-track {
+      background: var(--bg2);
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: var(--e-color, var(--accent));
+      width: 0;
+      transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 8px var(--e-color, var(--accent));
+    }
+
+    .dominant-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(192, 132, 252, 0.1);
+      border: 1px solid rgba(192, 132, 252, 0.25);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 10px;
+    }
+
+    /* ── Radar / Visual Summary ── */
+    .visual-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+
+    .visual-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-label {
+      width: 80px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bar-track {
+      flex: 1;
+      background: var(--bg2);
+      border-radius: 100px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bar-val {
+      width: 44px;
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    /* ── Error ── */
+    .error-msg {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #FCA5A5;
+      font-size: 14px;
+      display: none;
+    }
+
+    /* ── Tokens visualization ── */
+    .tokens-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .token-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .token {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .token.highlighted {
+      color: white;
+      border-color: transparent;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .emotion-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stats {
+        display: none;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .emotion-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-mesh"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-tag">NLP Emotion Analysis Engine</div>
+      <h1>Emoti<span>Sense</span></h1>
+      <p class="subtitle">Detect nuanced emotions in text using natural language processing — happiness, sadness, anger,
+        fear & more.</p>
+    </header>
+
+    <!-- Input -->
+    <div class="input-card">
+      <div class="input-label">
+        <span>✏ Input Text</span>
+        <span id="char-count">0 chars</span>
+      </div>
+      <textarea id="text-input"
+        placeholder="Type or paste any text here — a sentence, paragraph, or even a tweet — and discover the emotions within..."
+        maxlength="2000"></textarea>
+      <div class="input-footer">
+        <div class="example-chips">
+          <span class="chip" onclick="setExample(this)">😄 I'm so excited about the trip!</span>
+          <span class="chip" onclick="setExample(this)">😢 I really miss my old friends</span>
+          <span class="chip" onclick="setExample(this)">😠 This is absolutely ridiculous and unfair</span>
+          <span class="chip" onclick="setExample(this)">😨 I'm terrified about the surgery</span>
+          <span class="chip" onclick="setExample(this)">😲 I can't believe she actually said yes!</span>
+        </div>
+        <button class="analyze-btn" onclick="analyzeText()" id="analyze-btn">
+          <span class="btn-icon">⚡</span> Analyze
+        </button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+      <div class="loader"></div>
+      Processing emotions...
+    </div>
+
+    <!-- Results -->
+    <div id="results" style="display:none">
+      <div class="results-header">
+        <div class="results-title">Analysis Results</div>
+        <div class="stats">
+          <span><span class="stat-val" id="stat-words">0</span> words</span>
+          <span><span class="stat-val" id="stat-sentences">0</span> sentences</span>
+          <span><span class="stat-val" id="stat-emotions">0</span> emotions detected</span>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="summary-card" id="summary-card">
+        <div class="dominant-emoji" id="dom-emoji">😐</div>
+        <div>
+          <div class="dominant-label" id="dom-label">Dominant Emotion</div>
+          <div class="summary-text" id="summary-text">—</div>
+        </div>
+      </div>
+
+      <!-- Emotion cards -->
+      <div class="emotion-grid" id="emotion-grid"></div>
+
+      <!-- Bar chart -->
+      <div class="visual-section">
+        <div class="visual-title">📊 Emotion Distribution</div>
+        <div class="bar-chart" id="bar-chart"></div>
+      </div>
+
+      <!-- Token highlight -->
+      <div class="tokens-section">
+        <div class="visual-title">🔍 Tokenized Input</div>
+        <div class="token-wrap" id="token-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── DOM refs (named clearly to avoid collision with API data) ──
+    const textarea = document.getElementById('text-input');
+    const charCount = document.getElementById('char-count');
+    const resultsPanel = document.getElementById('results');   // the <div>, NOT data
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error-msg');
+    const analyzeBtn = document.getElementById('analyze-btn');
+
+    textarea.addEventListener('input', () => {
+      charCount.textContent = textarea.value.length + ' chars';
+    });
+
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) analyzeText();
+    });
+
+    function setExample(el) {
+      const txt = el.textContent.replace(/^[\uD800-\uDFFF\u2600-\u27BF\u{1F300}-\u{1FFFF}\s]+/u, '').trim();
+      textarea.value = txt;
+      charCount.textContent = txt.length + ' chars';
+      analyzeText();
+    }
+
+    // ── Keyword map for token highlighting ──
+    const KEYWORD_MAP = {
+      happy: ["happy", "joy", "joyful", "excited", "wonderful", "fantastic", "great", "love", "amazing", "awesome", "delighted", "cheerful", "glad", "pleased", "thrilled", "ecstatic", "blissful", "elated", "content", "satisfied", "grateful", "thankful", "enjoy", "smile", "laugh", "fun", "celebrate", "good", "excellent", "superb", "brilliant", "terrific", "perfect", "beautiful", "lucky", "blessed", "optimistic", "hopeful", "radiant", "gleeful", "proud", "overjoyed", "exhilarated"],
+      sad: ["sad", "unhappy", "depressed", "miserable", "heartbroken", "grief", "sorrow", "melancholy", "gloomy", "downcast", "dejected", "hopeless", "lonely", "alone", "abandoned", "rejected", "hurt", "pain", "cry", "tears", "miss", "lost", "loss", "mourn", "regret", "disappointed", "unfortunate", "tragic", "broken", "devastated", "crushed", "empty", "helpless", "worthless", "tired", "exhausted", "drained"],
+      angry: ["angry", "anger", "furious", "rage", "mad", "outraged", "irate", "livid", "enraged", "infuriated", "irritated", "annoyed", "frustrated", "aggravated", "hostile", "bitter", "resentful", "hatred", "hate", "despise", "offended", "insulted", "wrath", "fury", "explode", "boiling", "seething", "fuming", "yelling", "screaming", "stupid", "idiot", "ridiculous", "absurd", "unacceptable"],
+      fear: ["fear", "afraid", "scared", "terrified", "terror", "horror", "frightened", "panic", "anxious", "anxiety", "nervous", "worried", "dread", "apprehensive", "uneasy", "tense", "trembling", "shaking", "phobia", "paranoid", "insecure", "unsafe", "danger", "dangerous", "nightmare", "creepy", "alarmed", "startled", "shocked", "petrified", "frozen", "hesitant", "uncertain", "doubt", "disturbed", "concerned"],
+      surprise: ["surprised", "surprise", "astonished", "amazed", "stunned", "unbelievable", "incredible", "wow", "omg", "astounded", "flabbergasted", "bewildered", "baffled", "speechless", "remarkable", "extraordinary", "bizarre", "strange", "odd", "weird", "unusual", "curious", "mystery", "mysterious", "discover"],
+      disgust: ["disgusting", "disgusted", "disgust", "gross", "revolting", "repulsive", "nauseating", "sick", "vile", "filthy", "dirty", "nasty", "appalled", "abhorrent", "loathsome", "yuck", "eww", "ugh", "awful", "terrible", "foul", "putrid", "rotten", "corrupt", "toxic", "poisonous"]
+    };
+
+    const COLORS = {
+      happy: "#F59E0B", sad: "#3B82F6", angry: "#EF4444",
+      fear: "#8B5CF6", surprise: "#10B981", disgust: "#84CC16", neutral: "#9CA3AF"
+    };
+
+    function getTokenColor(word) {
+      const w = word.toLowerCase().replace(/[^a-z]/g, '');
+      for (const [emotion, words] of Object.entries(KEYWORD_MAP)) {
+        if (words.includes(w)) return COLORS[emotion];
+      }
+      return null;
+    }
+
+    // ── Main analysis function ──
+    async function analyzeText() {
+      const inputText = textarea.value.trim();
+      if (!inputText) return;
+
+      analyzeBtn.disabled = true;
+      loadingEl.style.display = 'block';
+      resultsPanel.style.display = 'none';
+      errorEl.style.display = 'none';
+
+      try {
+        const formData = new FormData();
+        formData.append('text', inputText);
+
+        const response = await fetch('/analyze', { method: 'POST', body: formData });
+        const payload = await response.json();
+
+        if (payload.error) throw new Error(payload.error);
+
+        renderResults(payload);
+
+      } catch (err) {
+        errorEl.textContent = err.message || 'Analysis failed. Please try again.';
+        errorEl.style.display = 'block';
+      } finally {
+        analyzeBtn.disabled = false;
+        loadingEl.style.display = 'none';
+      }
+    }
+
+    // ── Render results from API payload ──
+    function renderResults(payload) {
+      // payload = { results: [...], summary, word_count, sentence_count, text }
+      const emotionList = payload.results;        // ← array of emotion objects
+      const summary = payload.summary;
+      const wordCount = payload.word_count;
+      const sentCount = payload.sentence_count;
+      const originalText = payload.text;
+
+      // Stats bar
+      document.getElementById('stat-words').textContent = wordCount;
+      document.getElementById('stat-sentences').textContent = sentCount;
+      document.getElementById('stat-emotions').textContent =
+        emotionList.filter(e => e.emotion !== 'Neutral').length;
+
+      // Summary card
+      const topEmotion = emotionList[0] || {};
+      document.getElementById('dom-emoji').textContent = topEmotion.emoji || '😐';
+      document.getElementById('dom-label').textContent = topEmotion.emotion || 'Neutral';
+      document.getElementById('summary-text').textContent = summary;
+
+      // ── Emotion cards ──
+      const grid = document.getElementById('emotion-grid');
+      grid.innerHTML = '';
+      emotionList.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'emotion-card' + (item.dominant ? ' dominant' : '');
+        card.style.setProperty('--e-color', item.color);
+        card.innerHTML = `
+        <div class="emotion-top">
+          <div class="emotion-name">
+            <span class="e-emoji">${item.emoji}</span>
+            ${item.emotion}
+          </div>
+          <div class="e-pct" style="color:${item.color}">${item.percentage}%</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="pf-${idx}" style="background:${item.color};box-shadow:0 0 8px ${item.color}"></div>
+        </div>
+        ${item.dominant ? '<div class="dominant-badge">★ Dominant</div>' : ''}
+      `;
+        grid.appendChild(card);
+      });
+
+      // ── Bar chart ──
+      const barChart = document.getElementById('bar-chart');
+      barChart.innerHTML = '';
+      emotionList.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        row.innerHTML = `
+        <div class="bar-label">${item.emoji} ${item.emotion}</div>
+        <div class="bar-track">
+          <div class="bar-fill" id="bf-${idx}"
+            style="background:${item.color};box-shadow:0 0 8px ${item.color}"></div>
+        </div>
+        <div class="bar-val">${item.percentage}%</div>
+      `;
+        barChart.appendChild(row);
+      });
+
+      // ── Token highlighter ──
+      const tokenWrap = document.getElementById('token-wrap');
+      tokenWrap.innerHTML = '';
+      originalText.split(/(\s+)/).forEach(tok => {
+        if (/^\s+$/.test(tok)) {
+          tokenWrap.appendChild(document.createTextNode(' '));
+          return;
+        }
+        const span = document.createElement('span');
+        span.className = 'token';
+        span.textContent = tok;
+        const color = getTokenColor(tok);
+        if (color) {
+          span.classList.add('highlighted');
+          span.style.background = color + '22';
+          span.style.borderColor = color + '66';
+          span.style.color = color;
+        }
+        tokenWrap.appendChild(span);
+      });
+
+      // Show the panel
+      resultsPanel.style.display = 'block';
+
+      // Animate progress bars after next two frames
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          emotionList.forEach((item, idx) => {
+            const pf = document.getElementById('pf-' + idx);
+            const bf = document.getElementById('bf-' + idx);
+            if (pf) pf.style.width = item.percentage + '%';
+            if (bf) bf.style.width = item.percentage + '%';
+          });
+        });
+      });
+    }
+  </script>
+</body>
+
+</html>

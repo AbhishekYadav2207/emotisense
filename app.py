@@ -4,7 +4,34 @@ import math
 
 app = Flask(__name__)
 
-# ─── Emotion Lexicon ───────────────────────────────────────────────────────────
+# ─── Emoji to Emotion Map ────────────────────────────────────────────────────
+# A simple mapping of common emojis to your emotion categories.
+# You can expand this later with a more comprehensive dataset (e.g., EmojiNet).
+EMOJI_MAP = {
+    # Happy / Joy
+    "😀": "happy", "😄": "happy", "😂": "happy", "🤣": "happy", "😊": "happy",
+    "😁": "happy", "🥰": "happy", "😍": "happy", "🤩": "happy", "😘": "happy",
+    "😗": "happy", "😚": "happy", "😙": "happy", "😋": "happy", "😛": "happy",
+    "😜": "happy", "🤪": "happy", "😝": "happy", "🤑": "happy", "🤗": "happy",
+    "🤭": "happy", "🤫": "happy", "🤔": "happy", "🤐": "happy", "🤨": "happy",
+    "😏": "happy",
+    # Sadness
+    "😢": "sad", "😭": "sad", "😿": "sad", "😔": "sad", "😞": "sad", "😟": "sad",
+    # Anger
+    "😠": "angry", "😡": "angry", "🤬": "angry", "😤": "angry",
+    # Fear
+    "😨": "fear", "😰": "fear", "😱": "fear", "😥": "fear", "😓": "fear",
+    # Surprise
+    "😲": "surprise", "😮": "surprise", "😯": "surprise", "😳": "surprise",
+    # Disgust
+    "🤢": "disgust", "🤮": "disgust", "🤧": "disgust", "😷": "disgust",
+    # Neutral / Other (you can map these as you like)
+    "😐": None,      # ignore or treat as neutral
+    "😑": None,
+    "😶": None
+}
+
+# ─── Emotion Lexicon (unchanged) ─────────────────────────────────────────────
 EMOTION_LEXICON = {
     "happy": {
         "color": "#F59E0B",
@@ -178,10 +205,9 @@ def detect_emotions(text):
     text_lower = text.lower()
     scores = {emotion: 0.0 for emotion in EMOTION_LEXICON}
 
+    # --- Keyword matching (unchanged) ---
     for emotion, data in EMOTION_LEXICON.items():
         keyword_set = set(data["keywords"])
-
-        # --- Keyword matching ---
         for i, token in enumerate(tokens):
             if token in keyword_set:
                 multiplier = get_intensifier(tokens, i)
@@ -191,12 +217,20 @@ def detect_emotions(text):
                 else:
                     scores[emotion] += base_score
 
-        # --- Phrase matching ---
+        # --- Phrase matching (unchanged) ---
         for phrase in data["phrases"]:
             if phrase in text_lower:
                 scores[emotion] += 2.5
 
-    # --- Normalize to percentages ---
+    # --- NEW: Emoji contribution ---
+    for char in text:
+        if char in EMOJI_MAP:
+            target_emotion = EMOJI_MAP[char]
+            if target_emotion:  # ignore mapped None (neutral)
+                # Add a base score of 1.0 per emoji (you can adjust weight)
+                scores[target_emotion] += 1.0
+
+    # --- Normalize to percentages (unchanged) ---
     total = sum(max(0.0, s) for s in scores.values())
     results = []
 
